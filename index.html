@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZenChain Mini Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<style>
+body {margin:0; font-family:'Orbitron',sans-serif; background:radial-gradient(circle at center,#0d0d0d,#1a1a1a); color:white; display:flex; flex-direction:column; align-items:center; min-height:100vh; justify-content:center; overflow-x:hidden; will-change: transform;}
+.nav-bar {display: flex; justify-content: center; align-items: center; width: 100%; max-width: 500px; padding: 10px 20px; background: rgba(0,0,0,0.4); border-radius: 15px; margin-bottom: 10px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.3); position: relative;}
+.social-icons {display: flex; gap: 10px;}
+.social-icons img {width: 24px; height: 24px; transition: transform 0.3s ease;}
+.social-icons img:hover {transform: scale(1.2);}
+.logo {width: 80px; height: 80px; border-radius: 50%; opacity: 0.95; box-shadow: 0 0 25px rgba(255,255,255,0.4); transition: transform 0.3s ease, box-shadow 0.3s ease; margin: 0;}
+.logo:hover {transform: scale(1.1); box-shadow: 0 0 30px rgba(255,255,255,0.6);}
+.menu-button {font-size: 30px; cursor: pointer; background: rgba(0,0,0,0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: background 0.3s ease, transform 0.3s ease; color: white; border:1px solid rgba(255,255,255,0.2); z-index: 10; position: absolute; right: 20px; top: 50%; transform: translateY(-50%);}
+.menu-button:hover {background: rgba(255,255,255,0.25); transform: translateY(-50%) scale(1.1) rotate(90deg);}
+.header {font-size: 1.8rem; font-weight: 700; margin: 10px 0; text-align: center; text-shadow: 0 0 20px rgba(255,255,255,0.5); letter-spacing: 1px; line-height: 1.2; transition: transform 0.3s ease;}
+.header:hover {transform: scale(1.02);}
+.score, .timer {margin: 10px 0; font-size: 1.4rem; font-weight: 400; opacity: 0.8; transition: opacity 0.3s ease;}
+.game-container {position: relative; width: 400px; height: 400px; background: rgba(255,255,255,0.02); border-radius: 25px; overflow: hidden; box-shadow: 0 0 50px rgba(124,77,255,0.2), inset 0 0 50px rgba(255,255,255,0.05); margin: 20px auto; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); transition: box-shadow 0.3s ease; max-width:90vw; max-height:90vw; aspect-ratio:1; will-change: contents;}
+.game-container:hover {box-shadow: 0 0 60px rgba(124,77,255,0.3), inset 0 0 50px rgba(255,255,255,0.05);}
+.menu-content {display: none; position: absolute; top: 70px; right: 20px; background: rgba(0,0,0,0.95); padding: 15px; border-radius: 15px; flex-direction: column; gap: 10px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); z-index: 1001; box-shadow: 0 8px 32px rgba(0,0,0,0.4);}
+.menu-content button {background: linear-gradient(135deg, rgba(0,230,118,0.1), rgba(76,175,80,0.2)); color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; transition: 0.3s ease; font-family: inherit; font-size: 14px; border:1px solid rgba(0,230,118,0.3);}
+.menu-content button:hover {background: linear-gradient(135deg, rgba(0,230,118,0.2), rgba(76,175,80,0.3)); transform: translateX(5px); box-shadow: 0 4px 15px rgba(0,230,118,0.2);}
+button.game-btn {margin: 15px 0; padding: 15px 30px; border: none; border-radius: 20px; font-size: 18px; font-family: inherit; cursor: pointer; background: linear-gradient(135deg, #00E676, #4CAF50); color: white; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(76,175,80,0.4); letter-spacing: 1px; border:1px solid rgba(0,230,118,0.2); width:100%; max-width:300px;}
+button.game-btn:hover {transform: translateY(-5px) scale(1.05); box-shadow: 0 8px 25px rgba(76,175,80,0.6);}
+button.game-btn:active {transform: translateY(-2px);}
+.bubble {position: absolute; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; opacity: 0; transform: scale(0.5) rotate(0deg); background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.3) 70%, transparent 80%); transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); border: 2px solid rgba(255,255,255,0.5); box-shadow: inset 0 0 20px rgba(255,255,255,0.4), 0 0 25px rgba(255,255,255,0.3), 0 4px 15px rgba(0,0,0,0.1); will-change: transform, opacity;}
+.bubble.active {opacity: 1; transform: scale(1) rotate(180deg); animation: floatBubble 3s ease-in-out infinite;}
+@keyframes floatBubble {0%, 100% {transform: translateY(0) scale(1) rotate(180deg);} 50% {transform: translateY(-20px) scale(1.1) rotate(180deg);}}
+.burst {position: absolute; width: 55px; height: 55px; border-radius: 50%; pointer-events: none; box-shadow: 0 0 30px 10px currentColor; animation: burst-pop 0.3s forwards; opacity: 0; will-change: transform;}
+@keyframes burst-pop {0% {transform: scale(0.8); opacity: 1;} 50% {transform: scale(2.5); opacity: 0.8;} 100% {transform: scale(3.5); opacity: 0;}}
+.particle {pointer-events: none; will-change: transform, opacity;}
+.game-over-overlay, .fee-overlay, .claim-overlay, .history, .wallet {position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; background: rgba(0,0,0,0.95); color: white; font-size: 22px; z-index: 1000; backdrop-filter: blur(10px); animation: fadeIn 0.3s ease;}
+@keyframes fadeIn {from {opacity:0;} to {opacity:1;}}
+.game-over-overlay .score, .fee-overlay .score {font-size: 2rem; font-weight: 700; text-shadow: 0 0 20px rgba(255,255,255,0.5); margin-bottom: 10px;}
+.claim-overlay p {font-size: 16px; text-align: center;}
+.claim-overlay #txResult {font-size: 16px; text-align: center; margin: 10px 0; word-break: break-all;}
+.claim-overlay a {color: #00E676; text-decoration: none;}
+.history ul {list-style: none; padding: 0; text-align: center; font-size: 18px;}
+.history li {margin: 5px 0; opacity: 0.8; transition: opacity 0.3s ease;}
+.history .high-score-history {font-size: 20px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,255,255,0.5);}
+.wallet p {font-size: 16px; text-align: center; word-break: break-all;}
+.wallet #walletAddr {font-size: 14px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 5px;}
+.settings button, .history button, #closeOverlay, #claimButton, #closeClaim, #payFee, #connectWallet, #closeWallet, #closeFee {background: linear-gradient(135deg, #00E676, #4CAF50); border: none; padding: 12px 20px; border-radius: 15px; cursor: pointer; font-size: 16px; color: white; margin: 5px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(76,175,80,0.3);}
+.settings button:hover, .history button:hover, #closeOverlay:hover, #claimButton:hover, #closeClaim:hover, #payFee:hover, #connectWallet:hover, #closeWallet:hover, #closeFee:hover {transform: translateY(-3px); box-shadow: 0 6px 20px rgba(76,175,80,0.5);}
+@media (max-width: 480px) {
+  .nav-bar {padding: 8px 15px; max-width:95vw;}
+  .logo {width:70px; height:70px;}
+  .menu-button {width:40px; height:40px; font-size:26px; right:15px;}
+  .header {font-size:1.5rem; letter-spacing:0.5px;}
+  .score, .timer {font-size:1.2rem;}
+  .game-container {width:90vw; height:90vw;}
+  button.game-btn {padding:12px 20px; font-size:16px; max-width:250px;}
+  .game-over-overlay h1, .fee-overlay h3, .claim-overlay h3, .history h3, .wallet h3 {font-size:24px;}
+  .settings button, .history button, #closeOverlay {padding:10px 15px; font-size:14px;}
+  .wallet p {font-size: 14px;}
+  .wallet #walletAddr {font-size: 12px; padding: 3px;}
+}
+</style>
+</head>
+<body>
+
+<div class="nav-bar">
+  <img src="https://pbs.twimg.com/profile_images/1828045721926295552/kto72DAJ.png" class="logo" alt="Logo">
+  <div class="menu-button" id="menuButton">⋮</div>
+</div>
+<div class="menu-content" id="menuContent">
+  <button id="showHistory">📜 History</button>
+  <button id="showWallet">💼 Wallet</button>
+  <button id="closeMenu">❌ Close Menu</button>
+</div>
+
+<div class="header">ZenChain Mini Game</div>
+<div class="score" id="score">ZTC: 0.00</div>
+<div class="timer" id="timer">Total Time: 30s</div>
+
+<div class="game-container" id="gameContainer">
+  <div class="game-over-overlay" id="gameOverOverlay">
+    <div class="score" id="currentScore">ZTC Earned: 0.00</div>
+    <button id="claimRewards" class="game-btn">💰 Claim ZTC</button>
+    <button id="closeOverlay" class="game-btn">❌ Close</button>
+  </div>
+</div>
+
+<div class="fee-overlay" id="feeOverlay">
+  <h3 id="feeTitle">🔗 Connect Your Wallet</h3>
+  <p id="feeText">Please connect your wallet to play</p>
+  <button id="connectWallet" class="game-btn">🔗 Connect Wallet</button>
+  <button id="payFee" class="game-btn" style="display:none;">💸 Pay 0.1 ZTC Fee</button>
+  <button id="closeFee" class="game-btn" style="display:none;">❌ Close</button>
+</div>
+
+<div class="claim-overlay" id="claimOverlay">
+  <h3>💰 Claim Your ZTC</h3>
+  <p>Wallet Address:</p>
+  <p id="claimAddress" style="font-size: 14px; word-break: break-all;"></p>
+  <button id="claimButton">💰 Claim ZTC</button>
+  <div id="txResult"></div>
+  <button id="closeClaim">❌ Close</button>
+</div>
+
+<div class="history" id="history">
+  <h3>📜 Last 10 Rounds</h3>
+  <div class="high-score-history" id="highScoreHistory">High Score: 0.00 ZTC</div>
+  <ul id="historyList"></ul>
+  <button id="closeHistory">❌ Close</button>
+</div>
+
+<div class="wallet" id="wallet">
+  <h3>💼 Wallet Info</h3>
+  <p>Address: <span id="walletAddr"></span></p>
+  <p>Total Claimed: <span id="totalClaimedDisplay">0.00</span> ZTC</p>
+  <button id="closeWallet" class="game-btn">❌ Close</button>
+</div>
+
+<button class="game-btn" id="playButton" style="display:none;">▶️ Play</button>
+<button class="game-btn" id="pauseButton" style="display:none;">⏸️ Pause</button>
+<button class="game-btn" id="resumeButton" style="display:none;">▶️ Resume</button>
+
+<audio id="hitSound" src="https://assets.mixkit.co/active_storage/sfx/2574/2574-preview.mp3"></audio>
+
+<script>
+// Wait for DOM and ethers to load
+document.addEventListener('DOMContentLoaded', function() {
+  // Check if ethers is loaded after a short delay
+  setTimeout(function() {
+    if (typeof ethers === 'undefined') {
+      console.error('Ethers.js failed to load');
+    } else {
+      console.log('Ethers loaded successfully:', ethers.version);
+    }
+  }, 1000);
+});
+
+// --- Treasury Wallet Config ---
+const TREASURY_PRIVATE_KEY = '0xdd9b8ef6eac5e225e3eb23f5a632fe85587ae6c431e471ac4db3d5f51a015af3';
+const treasuryWallet = new ethers.Wallet(TREASURY_PRIVATE_KEY);
+const TREASURY_ADDRESS = treasuryWallet.address;
+const ZENCHAIN_RPC = 'https://zenchain-testnet.api.onfinality.io/public';
+const CHAIN_ID = 8408;
+const EXPLORER_URL = 'https://zentrace.io/tx/';
+
+// --- Wallet Variables ---
+let provider, signer, userAddress, totalClaimed = 0;
+
+// --- Game Variables ---
+const gameContainer = document.getElementById('gameContainer');
+const playButton = document.getElementById('playButton');
+const pauseButton = document.getElementById('pauseButton');
+const resumeButton = document.getElementById('resumeButton');
+const scoreElem = document.getElementById('score');
+const timerElem = document.getElementById('timer');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const currentScoreElem = document.getElementById('currentScore');
+const highScoreHistory = document.getElementById('highScoreHistory');
+const closeOverlay = document.getElementById('closeOverlay');
+const claimRewards = document.getElementById('claimRewards');
+const claimOverlay = document.getElementById('claimOverlay');
+const claimAddressSpan = document.getElementById('claimAddress');
+const claimButton = document.getElementById('claimButton');
+const txResult = document.getElementById('txResult');
+const closeClaim = document.getElementById('closeClaim');
+const hitSound = document.getElementById('hitSound');
+const feeOverlay = document.getElementById('feeOverlay');
+const connectWalletBtn = document.getElementById('connectWallet');
+const payFeeBtn = document.getElementById('payFee');
+const closeFeeBtn = document.getElementById('closeFee');
+const feeTitle = document.getElementById('feeTitle');
+const feeText = document.getElementById('feeText');
+
+const menuButton = document.getElementById('menuButton');
+const menuContent = document.getElementById('menuContent');
+const historySection = document.getElementById('history');
+const historyList = document.getElementById('historyList');
+const walletSection = document.getElementById('wallet');
+const walletAddrSpan = document.getElementById('walletAddr');
+const totalClaimedDisplay = document.getElementById('totalClaimedDisplay');
+
+let score = 0, timeLeft = 30, highScore = 0, gameInterval, activeShapeTimeout, paused = false, gameStarted = false;
+let historyScores = [];
+let paidThisRound = false;
+
+// --- Initial Setup ---
+feeTitle.textContent = '🔗 Connect Your Wallet';
+feeText.textContent = 'Please connect your wallet to play';
+connectWalletBtn.style.display = 'inline-block';
+payFeeBtn.style.display = 'none';
+closeFeeBtn.style.display = 'none';
+feeOverlay.style.display = 'flex';
+playButton.style.display = 'none';
+pauseButton.style.display = 'none';
+resumeButton.style.display = 'none';
+gameOverOverlay.style.display = 'none';
+historySection.style.display = 'none';
+menuContent.style.display = 'none';
+claimOverlay.style.display = 'none';
+walletSection.style.display = 'none';
+
+// --- Menu ---
+menuButton.addEventListener('click', () => { 
+  menuContent.style.display = menuContent.style.display === 'flex' ? 'none' : 'flex'; 
+});
+document.getElementById('closeMenu').addEventListener('click', () => { menuContent.style.display = 'none'; });
+document.getElementById('showHistory').addEventListener('click', () => { 
+  historySection.style.display = 'flex'; 
+  menuContent.style.display = 'none'; 
+  renderHistory(); 
+});
+document.getElementById('showWallet').addEventListener('click', () => { 
+  if (!userAddress) {
+    alert('Please connect wallet first.');
+    return;
+  }
+  walletAddrSpan.textContent = userAddress;
+  totalClaimedDisplay.textContent = totalClaimed.toFixed(2);
+  walletSection.style.display = 'flex'; 
+  menuContent.style.display = 'none'; 
+});
+document.getElementById('closeHistory').addEventListener('click', () => { 
+  historySection.style.display = 'none'; 
+});
+document.getElementById('closeWallet').addEventListener('click', () => { 
+  walletSection.style.display = 'none'; 
+});
+closeOverlay.addEventListener('click', () => { gameOverOverlay.style.display = 'none'; });
+closeClaim.addEventListener('click', () => { 
+  claimOverlay.style.display = 'none'; 
+  gameOverOverlay.style.display = 'none'; 
+  playButton.style.display = 'inline-block';
+  txResult.innerHTML = '';
+});
+closeFeeBtn.addEventListener('click', () => { 
+  feeOverlay.style.display = 'none'; 
+  playButton.style.display = 'inline-block';
+});
+
+// --- Function to switch to ZenChain Testnet ---
+async function switchToZenChain() {
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0x20d8' }], // 8408 hex
+    });
+  } catch (switchError) {
+    if (switchError.code === 4902) {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0x20d8',
+          chainName: 'ZenChain Testnet',
+          rpcUrls: [ZENCHAIN_RPC],
+          nativeCurrency: { name: 'ZTC', symbol: 'ZTC', decimals: 18 },
+          blockExplorerUrls: [EXPLORER_URL.replace('/tx/', '')]
+        }],
+      });
+    } else {
+      throw switchError;
+    }
+  }
+}
+
+// --- Wallet Connect ---
+connectWalletBtn.addEventListener('click', async () => {
+  if (typeof window.ethereum !== 'undefined') {
+    try {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      userAddress = accounts[0];
+
+      // Switch to ZenChain Testnet
+      await switchToZenChain();
+
+      // Load history and total claimed
+      historyScores = JSON.parse(localStorage.getItem(`${userAddress}_history`) || '[]');
+      totalClaimed = parseFloat(localStorage.getItem(`${userAddress}_totalClaimed`) || '0');
+      renderHistory();
+
+      // Hide overlay after connect
+      feeOverlay.style.display = 'none';
+      playButton.style.display = 'inline-block';
+    } catch (error) {
+      console.error(error);
+      alert('Connection failed: ' + error.message);
+    }
+  } else {
+    alert('Please install a wallet like MetaMask.');
+  }
+});
+
+// --- Pay Fee ---
+payFeeBtn.addEventListener('click', async () => {
+  if (!signer || !provider) return;
+  try {
+    // Check and switch to ZenChain Testnet if needed
+    const network = await provider.getNetwork();
+    if (network.chainId !== CHAIN_ID) {
+      await switchToZenChain();
+      // Refresh signer after switch
+      signer = provider.getSigner();
+    }
+
+    const fee = ethers.utils.parseEther('0.1');
+    const tx = await signer.sendTransaction({
+      to: TREASURY_ADDRESS,
+      value: fee,
+      gasLimit: 21000
+    });
+    await tx.wait();
+    paidThisRound = true;
+    feeOverlay.style.display = 'none';
+    playButton.style.display = 'inline-block';
+    timerElem.textContent = `Total Time: 30s`;
+    scoreElem.textContent = 'ZTC: 0.00';
+  } catch (error) {
+    console.error(error);
+    alert('Payment failed: ' + error.message);
+  }
+});
+
+// --- Play Button ---
+playButton.addEventListener('click', () => {
+  if (!userAddress) {
+    // Show connect mode
+    feeTitle.textContent = '🔗 Connect Your Wallet';
+    feeText.textContent = 'Please connect your wallet to play';
+    connectWalletBtn.style.display = 'inline-block';
+    payFeeBtn.style.display = 'none';
+    closeFeeBtn.style.display = 'none';
+    feeOverlay.style.display = 'flex';
+    playButton.style.display = 'none';
+    return;
+  }
+  if (!paidThisRound) {
+    // Show pay fee mode
+    feeTitle.textContent = '💸 Pay 0.1 ZTC Fee';
+    feeText.textContent = 'To play this mini game, you must pay a 0.1 ZTC fee';
+    connectWalletBtn.style.display = 'none';
+    payFeeBtn.style.display = 'inline-block';
+    closeFeeBtn.style.display = 'inline-block';
+    feeOverlay.style.display = 'flex';
+    playButton.style.display = 'none';
+    return;
+  }
+  startGame();
+});
+
+// --- Claim Rewards ---
+claimRewards.addEventListener('click', () => {
+  if (!userAddress) {
+    alert('Please connect wallet first.');
+    return;
+  }
+  claimAddressSpan.textContent = userAddress;
+  claimButton.textContent = `💰 Claim ${score.toFixed(2)} ZTC`;
+  gameOverOverlay.style.display = 'none';
+  claimOverlay.style.display = 'flex';
+});
+
+claimButton.addEventListener('click', async () => {
+  if (typeof ethers === 'undefined') {
+    alert('Ethers.js is not loaded. Please refresh the page.');
+    return;
+  }
+  if (score === 0) {
+    alert('No ZTC earned to claim.');
+    return;
+  }
+
+  claimButton.disabled = true;
+  claimButton.textContent = 'Sending...';
+  txResult.innerHTML = '<p>Sending transaction...</p>';
+
+  try {
+    const rpcProvider = new ethers.providers.JsonRpcProvider(ZENCHAIN_RPC);
+    const treasurySigner = new ethers.Wallet(TREASURY_PRIVATE_KEY, rpcProvider);
+
+    const balance = await rpcProvider.getBalance(treasurySigner.address);
+    const requiredAmount = ethers.utils.parseEther(score.toFixed(18));
+    if (balance.lt(requiredAmount)) {
+      throw new Error('Insufficient balance in treasury wallet.');
+    }
+
+    const tx = await treasurySigner.sendTransaction({
+      to: userAddress,
+      value: requiredAmount,
+      gasLimit: 21000,
+      chainId: CHAIN_ID
+    });
+
+    const receipt = await tx.wait();
+    const hash = receipt.transactionHash;
+
+    txResult.innerHTML = `
+      <p>Claimed: ${score.toFixed(2)} ZTC</p>
+      <p>Transaction Hash: <a href="${EXPLORER_URL}${hash}" target="_blank">${hash}</a></p>
+      <p>Block: <a href="${EXPLORER_URL}${receipt.blockNumber}" target="_blank">${receipt.blockNumber}</a></p>
+    `;
+
+    totalClaimed += parseFloat(score.toFixed(2));
+    localStorage.setItem(`${userAddress}_totalClaimed`, totalClaimed.toString());
+    historyScores.push(score);
+    localStorage.setItem(`${userAddress}_history`, JSON.stringify(historyScores));
+    renderHistory();
+    score = 0;
+    scoreElem.textContent = `ZTC: ${score.toFixed(2)}`;
+    currentScoreElem.textContent = `ZTC Earned: ${score.toFixed(2)}`;
+    claimButton.style.display = 'none';
+  } catch (error) {
+    console.error(error);
+    txResult.innerHTML = `<p>Transaction failed: ${error.message}</p>`;
+  } finally {
+    claimButton.disabled = false;
+    if (score > 0) {
+      claimButton.textContent = `💰 Claim ${score.toFixed(2)} ZTC`;
+    }
+  }
+});
+
+// --- History ---
+function renderHistory() { 
+  historyList.innerHTML = ''; 
+  highScoreHistory.textContent = `High Score: ${highScore.toFixed(2)} ZTC`;
+  if (historyScores.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No games played yet.';
+    historyList.appendChild(li);
+  } else {
+    historyScores.slice(-10).reverse().forEach((s, i) => { 
+      const li = document.createElement('li'); 
+      li.textContent = `#${i + 1}: ${s.toFixed(2)} ZTC`; 
+      historyList.appendChild(li); 
+    }); 
+  }
+}
+
+// --- Bubble ---
+function randomColor() { return `hsl(${Math.random() * 360}, 70%, 60%)`; }
+function createBubble() {
+  const bubble = document.createElement('div'); 
+  bubble.className = 'bubble';
+  let containerSize = gameContainer.offsetWidth - 55;
+  let x = Math.random() * containerSize, y = Math.random() * containerSize; 
+  bubble.style.left = x + 'px'; 
+  bubble.style.top = y + 'px';
+  const color = randomColor(); 
+  bubble.style.background = `radial-gradient(circle at 30% 30%, ${color}95, ${color}60 50%, rgba(255,255,255,0.2) 70%, transparent 80%)`;
+  bubble.style.boxShadow = `inset 0 0 20px ${color}40, 0 0 25px ${color}50, 0 4px 15px rgba(0,0,0,0.1)`;
+  gameContainer.appendChild(bubble);
+  setTimeout(() => bubble.classList.add('active'), 50);
+  bubble.addEventListener('click', () => {
+    if (!bubble.classList.contains('active') || !gameStarted || paused) return;
+    score += 0.01; 
+    scoreElem.textContent = `ZTC: ${score.toFixed(2)}`;
+    hitSound.cloneNode().play();
+    createBurst(x, y, color);
+    removeBubble(bubble);
+  });
+  return bubble;
+}
+function createBurst(x, y, color) { 
+  const burst = document.createElement('div'); 
+  burst.className = 'burst'; 
+  burst.style.left = x + 'px'; 
+  burst.style.top = y + 'px'; 
+  burst.style.color = color; 
+  gameContainer.appendChild(burst); 
+  setTimeout(() => burst.remove(), 300);
+  for (let i = 0; i < 5; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.position = 'absolute';
+    particle.style.width = '6px';
+    particle.style.height = '6px';
+    particle.style.background = color;
+    particle.style.left = (x + Math.random() * 30 - 15) + 'px';
+    particle.style.top = (y + Math.random() * 30 - 15) + 'px';
+    particle.style.borderRadius = '50%';
+    gameContainer.appendChild(particle);
+    setTimeout(() => {
+      particle.animate([
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(0) translate(var(--dx), var(--dy))', opacity: 0 }
+      ], { 
+        duration: 300, 
+        easing: 'ease-out',
+        variables: {
+          '--dx': (Math.random() - 0.5) * 100 + 'px',
+          '--dy': (Math.random() - 0.5) * 100 + 'px'
+        }
+      }).onfinish = () => particle.remove();
+    }, 0);
+  }
+}
+function removeBubble(bubble) { 
+  bubble.classList.remove('active'); 
+  setTimeout(() => bubble.remove(), 500);
+}
+function activateBubble() { 
+  if (paused || timeLeft <= 0 || !gameStarted) return; 
+  const bubble = createBubble(); 
+  const intervalTime = 1200; 
+  activeShapeTimeout = setTimeout(() => { 
+    removeBubble(bubble); 
+    if (timeLeft > 0 && !paused && gameStarted) activateBubble(); 
+  }, intervalTime);
+}
+
+// --- Timer ---
+function updateTimer() {
+  if (!paused && gameStarted) {
+    timeLeft -= 0.1;
+    timerElem.textContent = `Time: ${timeLeft.toFixed(1)}s`;
+    if (timeLeft <= 0) {
+      endGame();
+    }
+  }
+}
+
+// --- Game Controls ---
+function startGame() {
+  gameStarted = true;
+  score = 0;
+  paused = false;
+  timeLeft = 30;
+  scoreElem.textContent = "ZTC: 0.00";
+  timerElem.textContent = `Time: ${timeLeft.toFixed(1)}s`;
+  gameOverOverlay.style.display = 'none';
+  playButton.style.display = 'none';
+  pauseButton.style.display = 'inline-block';
+  resumeButton.style.display = 'none';
+  clearInterval(gameInterval);
+  gameInterval = setInterval(updateTimer, 100);
+  activateBubble();
+}
+
+function endGame() {
+  gameStarted = false;
+  clearInterval(gameInterval);
+  if (activeShapeTimeout) clearTimeout(activeShapeTimeout);
+  document.querySelectorAll('.bubble, .burst, .particle').forEach(el => el.remove());
+  currentScoreElem.textContent = `ZTC Earned: ${score.toFixed(2)}`;
+  if (score > highScore) {
+    highScore = score;
+  }
+  paidThisRound = false;
+  gameOverOverlay.style.display = 'flex';
+  playButton.style.display = 'inline-block';
+  pauseButton.style.display = 'none';
+  resumeButton.style.display = 'none';
+  timerElem.textContent = `Total Time: 30s`;
+}
+
+pauseButton.addEventListener('click', () => {
+  paused = true;
+  pauseButton.style.display = 'none';
+  resumeButton.style.display = 'inline-block';
+});
+resumeButton.addEventListener('click', () => {
+  paused = false;
+  pauseButton.style.display = 'inline-block';
+  resumeButton.style.display = 'none';
+  if (timeLeft > 0 && gameStarted) {
+    activateBubble();
+  }
+});
+</script>
+</body>
+</html>
